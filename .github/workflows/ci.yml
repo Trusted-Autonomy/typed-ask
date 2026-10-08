@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      # Core, no optional features: must build and pass with thiserror alone.
+      - run: cargo build --all-targets --no-default-features
+      - run: cargo test
+      - run: cargo test --features decider
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo clippy --all-targets --features decider -- -D warnings
+      - run: cargo fmt --all -- --check

@@ -1,0 +1,27 @@
+[package]
+name = "ta-ask"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "A narrow, bounded-question decision primitive: ask(question, context, schema) -> {result, confidence}, with pluggable backends. Synchronous, minimal dependencies, optional local-model backend."
+repository = "https://github.com/Trusted-Autonomy/ta-ask"
+readme = "README.md"
+keywords = ["decision", "classifier", "agent", "autonomy", "llm"]
+categories = ["development-tools"]
+
+[dependencies]
+thiserror = "2"
+# Everything below is only pulled in by the `decider` feature. The core
+# (types, trait, ask(), fixture backends) depends on `thiserror` alone.
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json"], optional = true }
+serde = { version = "1", features = ["derive"], optional = true }
+serde_json = { version = "1", optional = true }
+
+[features]
+default = []
+# Adds `DeciderBackend`: spawns and/or talks HTTP to a Decider model server
+# (github.com/Mapika/decider). Plain HTTP to a local server only, no TLS stack.
+decider = ["dep:reqwest", "dep:serde", "dep:serde_json"]
+
+[dev-dependencies]
+tempfile = "3"
