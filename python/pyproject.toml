@@ -5,8 +5,8 @@ requires = ["maturin>=1.9,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "ta-ask"
-description = "A narrow, bounded-question decision primitive: ask(question, context, schema) -> {result, confidence}, with pluggable backends. Python bindings for the ta-ask Rust crate."
+name = "typed-ask"
+description = "A narrow, bounded-question decision primitive: ask(question, context, schema) -> {result, confidence}, with pluggable backends. Python bindings for the typed-ask Rust crate."
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.10"
@@ -20,12 +20,12 @@ classifiers = [
 ]
 
 [project.urls]
-Repository = "https://github.com/Trusted-Autonomy/ta-ask"
+Repository = "https://github.com/Trusted-Autonomy/typed-ask"
 
 [project.optional-dependencies]
 test = ["pytest>=7"]
 
 [tool.maturin]
-module-name = "ta_ask"
+module-name = "typed_ask"
 # The published wheel includes the real local-model backend.
 features = ["decider"]

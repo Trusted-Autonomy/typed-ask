@@ -1,10 +1,10 @@
 [package]
-name = "ta-ask"
+name = "typed-ask"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
 description = "A narrow, bounded-question decision primitive: ask(question, context, schema) -> {result, confidence}, with pluggable backends. Synchronous, minimal dependencies, optional local-model backend."
-repository = "https://github.com/Trusted-Autonomy/ta-ask"
+repository = "https://github.com/Trusted-Autonomy/typed-ask"
 readme = "README.md"
 keywords = ["decision", "classifier", "agent", "autonomy", "llm"]
 categories = ["development-tools"]

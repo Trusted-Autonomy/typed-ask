@@ -1,23 +1,23 @@
 [package]
-name = "ta-ask-py"
+name = "typed-ask-py"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-description = "Python bindings for ta-ask (module `ta_ask`), built with PyO3 and maturin."
-repository = "https://github.com/Trusted-Autonomy/ta-ask"
+description = "Python bindings for typed-ask (module `typed_ask`), built with PyO3 and maturin."
+repository = "https://github.com/Trusted-Autonomy/typed-ask"
 publish = false
 
 [lib]
-# Not `ta_ask`: that name belongs to the core crate this one depends on.
-# The Python-visible module name is set by `#[pyo3(name = "ta_ask")]` and
+# Not `typed_ask`: that name belongs to the core crate this one depends on.
+# The Python-visible module name is set by `#[pyo3(name = "typed_ask")]` and
 # pyproject.toml's `module-name`.
-name = "ta_ask_py"
+name = "typed_ask_py"
 crate-type = ["cdylib"]
 
 [dependencies]
-ta-ask = { path = ".." }
+typed-ask = { path = ".." }
 pyo3 = { version = "0.29", features = ["abi3-py310"] }
 
 [features]
 default = []
-decider = ["ta-ask/decider"]
+decider = ["typed-ask/decider"]

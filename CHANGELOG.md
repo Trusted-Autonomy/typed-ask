@@ -11,8 +11,8 @@ First standalone release, extracted from TrustedAutonomy's in-tree
 
 ### Added
 
-- `python/` workspace member (`ta-ask-py`): a PyO3 + maturin extension
-  module named `ta_ask`, built as an abi3 wheel (one wheel per platform for
+- `python/` workspace member (`typed-ask-py`): a PyO3 + maturin extension
+  module named `typed_ask`, built as an abi3 wheel (one wheel per platform for
   CPython 3.10+). Exposes the request/response types, `ask()`, the fixture
   backends, `DeciderBackend` (when built with the `decider` feature, which
   the published wheel enables), and any Python callable as a backend.

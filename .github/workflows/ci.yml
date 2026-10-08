@@ -40,8 +40,8 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: python -m pip install maturin pytest
-      - run: cargo clippy -p ta-ask-py --all-targets -- -D warnings
-      - run: cargo clippy -p ta-ask-py --all-targets --features decider -- -D warnings
+      - run: cargo clippy -p typed-ask-py --all-targets -- -D warnings
+      - run: cargo clippy -p typed-ask-py --all-targets --features decider -- -D warnings
       - name: Build abi3 wheel
         working-directory: python
         run: maturin build --release --out dist

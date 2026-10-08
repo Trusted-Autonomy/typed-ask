@@ -7,14 +7,14 @@ use std::collections::BTreeSet;
 use std::process::Command;
 use std::sync::Arc;
 
-use ta_ask::{ask, DecisionBackend, DecisionSchema, FixtureBackend};
+use typed_ask::{ask, DecisionBackend, DecisionSchema, FixtureBackend};
 
 /// Crates allowed in the core's normal (non-dev) dependency graph:
 /// `thiserror` and its proc-macro stack. Anything else showing up here
 /// means a required dependency was added, which every downstream library
 /// would then inherit.
 const CORE_ALLOWED: &[&str] = &[
-    "ta-ask",
+    "typed-ask",
     "thiserror",
     "thiserror-impl",
     "proc-macro2",
@@ -32,7 +32,7 @@ fn dependency_names(features: &[&str]) -> BTreeSet<String> {
         "--manifest-path",
         manifest,
         "-p",
-        "ta-ask",
+        "typed-ask",
         "--no-default-features",
         "-e",
         "normal",
@@ -68,7 +68,7 @@ fn core_without_features_depends_on_thiserror_only() {
         .collect();
     assert!(
         unexpected.is_empty(),
-        "core ta-ask (no features) gained dependencies beyond thiserror: {unexpected:?}. \
+        "core typed-ask (no features) gained dependencies beyond thiserror: {unexpected:?}. \
          Make them optional and put them behind a feature."
     );
     assert!(names.contains("thiserror"));
@@ -93,14 +93,14 @@ fn core_api_is_usable_through_an_arc_dyn_backend() {
     // call ask() with it, without naming a concrete backend type.
     let backend: Arc<dyn DecisionBackend> = Arc::new(FixtureBackend::yes_no(false, 0.75));
     let response = ask(backend.as_ref(), "q", "c", DecisionSchema::YesNo).unwrap();
-    assert_eq!(response.result, ta_ask::DecisionResult::Bool(false));
+    assert_eq!(response.result, typed_ask::DecisionResult::Bool(false));
     assert_eq!(response.model_id, "fixture");
 }
 
 #[cfg(feature = "decider")]
 #[test]
 fn decider_feature_exports_decider_backend_as_a_decision_backend() {
-    let backend: Arc<dyn DecisionBackend> = Arc::new(ta_ask::DeciderBackend::connect(
+    let backend: Arc<dyn DecisionBackend> = Arc::new(typed_ask::DeciderBackend::connect(
         "http://127.0.0.1:9",
         "decider-4b",
     ));
@@ -112,5 +112,8 @@ fn decider_feature_exports_decider_backend_as_a_decision_backend() {
         DecisionSchema::Score { min: 0.0, max: 1.0 },
     )
     .unwrap_err();
-    assert!(matches!(err, ta_ask::DecisionError::UnsupportedSchema(_)));
+    assert!(matches!(
+        err,
+        typed_ask::DecisionError::UnsupportedSchema(_)
+    ));
 }

@@ -1,6 +1,6 @@
-//! Python bindings for `ta-ask`, importable as the `ta_ask` module.
+//! Python bindings for `typed-ask`, importable as the `typed_ask` module.
 //!
-//! All decision logic lives in the core `ta-ask` crate; this crate only
+//! All decision logic lives in the core `typed-ask` crate; this crate only
 //! converts types at the boundary. `pyo3` is a dependency of this crate
 //! alone, never of the core, so `cargo test` of the core needs no Python.
 
@@ -11,21 +11,21 @@ use pyo3::create_exception;
 use pyo3::exceptions::{PyException, PyTypeError};
 use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyFloat, PyInt, PyString};
-use ta_ask as rs;
+use typed_ask as rs;
 
 create_exception!(
-    ta_ask,
+    typed_ask,
     DecisionError,
     PyException,
-    "Base class for every error raised by a ta_ask backend."
+    "Base class for every error raised by a typed_ask backend."
 );
-create_exception!(ta_ask, UnsupportedSchemaError, DecisionError);
-create_exception!(ta_ask, SpawnFailedError, DecisionError);
-create_exception!(ta_ask, BackendUnavailableError, DecisionError);
-create_exception!(ta_ask, ServerExitedEarlyError, DecisionError);
-create_exception!(ta_ask, RequestFailedError, DecisionError);
-create_exception!(ta_ask, MalformedResponseError, DecisionError);
-create_exception!(ta_ask, BackendFailedError, DecisionError);
+create_exception!(typed_ask, UnsupportedSchemaError, DecisionError);
+create_exception!(typed_ask, SpawnFailedError, DecisionError);
+create_exception!(typed_ask, BackendUnavailableError, DecisionError);
+create_exception!(typed_ask, ServerExitedEarlyError, DecisionError);
+create_exception!(typed_ask, RequestFailedError, DecisionError);
+create_exception!(typed_ask, MalformedResponseError, DecisionError);
+create_exception!(typed_ask, BackendFailedError, DecisionError);
 
 fn to_py_err(err: rs::DecisionError) -> PyErr {
     let msg = err.to_string();
@@ -43,7 +43,13 @@ fn to_py_err(err: rs::DecisionError) -> PyErr {
 
 /// The shape of answer a question expects. Build one with `yes_no()`,
 /// `choice([...])` or `score(min, max)`.
-#[pyclass(name = "DecisionSchema", module = "ta_ask", frozen, eq, from_py_object)]
+#[pyclass(
+    name = "DecisionSchema",
+    module = "typed_ask",
+    frozen,
+    eq,
+    from_py_object
+)]
 #[derive(Clone, PartialEq)]
 struct PySchema {
     inner: rs::DecisionSchema,
@@ -120,7 +126,7 @@ impl PySchema {
 
 /// What a backend receives: the question, its context, and the schema the
 /// answer must follow.
-#[pyclass(name = "DecisionRequest", module = "ta_ask", frozen, get_all)]
+#[pyclass(name = "DecisionRequest", module = "typed_ask", frozen, get_all)]
 struct PyRequest {
     question: String,
     context: String,
@@ -169,7 +175,7 @@ fn result_to_py(py: Python<'_>, result: &rs::DecisionResult) -> Py<PyAny> {
 /// chosen `str` for a choice, or a `float` for a score.
 #[pyclass(
     name = "DecisionResponse",
-    module = "ta_ask",
+    module = "typed_ask",
     frozen,
     eq,
     skip_from_py_object
@@ -235,7 +241,7 @@ impl PyResponse {
 
 /// Base class of every backend implemented in Rust. To write a backend in
 /// Python, pass a callable to `ask()` or wrap it in `CallableBackend`.
-#[pyclass(name = "DecisionBackend", module = "ta_ask", subclass, frozen)]
+#[pyclass(name = "DecisionBackend", module = "typed_ask", subclass, frozen)]
 struct PyBackend {
     inner: Arc<dyn rs::DecisionBackend>,
 }
@@ -249,7 +255,7 @@ impl PyBackend {
 }
 
 /// Always answers with the configured response. For tests.
-#[pyclass(name = "FixtureBackend", module = "ta_ask", extends = PyBackend, frozen)]
+#[pyclass(name = "FixtureBackend", module = "typed_ask", extends = PyBackend, frozen)]
 struct PyFixtureBackend;
 
 #[pymethods]
@@ -271,7 +277,7 @@ impl PyFixtureBackend {
 
 /// Always fails with `MalformedResponseError(message)`. For testing a
 /// caller's error handling.
-#[pyclass(name = "ErrorFixtureBackend", module = "ta_ask", extends = PyBackend, frozen)]
+#[pyclass(name = "ErrorFixtureBackend", module = "typed_ask", extends = PyBackend, frozen)]
 struct PyErrorFixtureBackend;
 
 #[pymethods]
@@ -311,7 +317,7 @@ impl CallableDecisionBackend {
         match returned.cast::<PyResponse>() {
             Ok(response) => Ok(response.get().inner.clone()),
             Err(_) => Err(PyTypeError::new_err(format!(
-                "a callable backend must return a ta_ask.DecisionResponse, got {}",
+                "a callable backend must return a typed_ask.DecisionResponse, got {}",
                 returned.get_type().name()?
             ))),
         }
@@ -332,7 +338,7 @@ impl rs::DecisionBackend for CallableDecisionBackend {
 
 /// Wraps a Python callable `fn(request: DecisionRequest) -> DecisionResponse`
 /// as a backend. `ask()` also accepts the bare callable directly.
-#[pyclass(name = "CallableBackend", module = "ta_ask", extends = PyBackend, frozen)]
+#[pyclass(name = "CallableBackend", module = "typed_ask", extends = PyBackend, frozen)]
 struct PyCallableBackend;
 
 #[pymethods]
@@ -364,7 +370,7 @@ mod decider {
 
     /// The real local-model backend: talks HTTP to a Decider model server,
     /// optionally spawning it. Construct with `connect()` or `spawn()`.
-    #[pyclass(name = "DeciderBackend", module = "ta_ask", extends = PyBackend, frozen)]
+    #[pyclass(name = "DeciderBackend", module = "typed_ask", extends = PyBackend, frozen)]
     pub(super) struct PyDeciderBackend;
 
     #[pymethods]
@@ -410,7 +416,7 @@ mod decider {
 }
 
 /// Ask `backend` one bounded question about `context` and return its
-/// answer. `backend` is any `ta_ask` backend, or a Python callable
+/// answer. `backend` is any `typed_ask` backend, or a Python callable
 /// `fn(request: DecisionRequest) -> DecisionResponse`. The GIL is released
 /// while a Rust backend works, so other Python threads keep running.
 #[pyfunction]
@@ -429,7 +435,7 @@ fn ask(
         })
     } else {
         return Err(PyTypeError::new_err(format!(
-            "ask() needs a ta_ask backend or a callable taking a DecisionRequest, got {}",
+            "ask() needs a typed_ask backend or a callable taking a DecisionRequest, got {}",
             backend.get_type().name()?
         )));
     };
@@ -446,8 +452,8 @@ fn ask(
 }
 
 #[pymodule]
-#[pyo3(name = "ta_ask")]
-fn ta_ask_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
+#[pyo3(name = "typed_ask")]
+fn typed_ask_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     m.add("HAS_DECIDER", cfg!(feature = "decider"))?;

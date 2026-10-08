@@ -5,12 +5,12 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import pytest
 
-import ta_ask
+import typed_ask
 
 
 def test_ask_with_yes_no_fixture_backend():
-    backend = ta_ask.FixtureBackend.yes_no(True, 0.9)
-    response = ta_ask.ask(backend, "is this safe?", "ctx", ta_ask.DecisionSchema.yes_no())
+    backend = typed_ask.FixtureBackend.yes_no(True, 0.9)
+    response = typed_ask.ask(backend, "is this safe?", "ctx", typed_ask.DecisionSchema.yes_no())
     assert response.result is True
     assert response.confidence == 0.9
     assert response.model_id == "fixture"
@@ -18,39 +18,39 @@ def test_ask_with_yes_no_fixture_backend():
 
 
 def test_fixture_backend_with_a_choice_response():
-    configured = ta_ask.DecisionResponse("billing", 0.97, model_id="fixture-choice")
-    backend = ta_ask.FixtureBackend(configured)
-    schema = ta_ask.DecisionSchema.choice(["billing", "technical"])
-    response = ta_ask.ask(backend, "which?", "charged twice", schema)
+    configured = typed_ask.DecisionResponse("billing", 0.97, model_id="fixture-choice")
+    backend = typed_ask.FixtureBackend(configured)
+    schema = typed_ask.DecisionSchema.choice(["billing", "technical"])
+    response = typed_ask.ask(backend, "which?", "charged twice", schema)
     assert response.result == "billing"
     assert response == configured
 
 
 def test_error_fixture_backend_raises_a_decision_error_subclass():
-    backend = ta_ask.ErrorFixtureBackend("boom")
-    with pytest.raises(ta_ask.MalformedResponseError, match="boom") as info:
-        ta_ask.ask(backend, "q", "c", ta_ask.DecisionSchema.yes_no())
-    assert isinstance(info.value, ta_ask.DecisionError)
+    backend = typed_ask.ErrorFixtureBackend("boom")
+    with pytest.raises(typed_ask.MalformedResponseError, match="boom") as info:
+        typed_ask.ask(backend, "q", "c", typed_ask.DecisionSchema.yes_no())
+    assert isinstance(info.value, typed_ask.DecisionError)
 
 
 def test_schema_accessors():
-    yes_no = ta_ask.DecisionSchema.yes_no()
+    yes_no = typed_ask.DecisionSchema.yes_no()
     assert (yes_no.kind, yes_no.options, yes_no.min, yes_no.max) == ("yes_no", None, None, None)
-    choice = ta_ask.DecisionSchema.choice(["a", "b"])
+    choice = typed_ask.DecisionSchema.choice(["a", "b"])
     assert (choice.kind, choice.options) == ("choice", ["a", "b"])
-    score = ta_ask.DecisionSchema.score(0.0, 10.0)
+    score = typed_ask.DecisionSchema.score(0.0, 10.0)
     assert (score.kind, score.min, score.max) == ("score", 0.0, 10.0)
-    assert choice == ta_ask.DecisionSchema.choice(["a", "b"])
+    assert choice == typed_ask.DecisionSchema.choice(["a", "b"])
     assert "choice" in repr(choice)
 
 
 def test_response_result_types_map_to_schema_kinds():
-    assert ta_ask.DecisionResponse(False, 0.6, "m").result is False
-    assert ta_ask.DecisionResponse("x", 0.6, "m").result == "x"
-    score = ta_ask.DecisionResponse(3, 0.6, "m").result
+    assert typed_ask.DecisionResponse(False, 0.6, "m").result is False
+    assert typed_ask.DecisionResponse("x", 0.6, "m").result == "x"
+    score = typed_ask.DecisionResponse(3, 0.6, "m").result
     assert isinstance(score, float) and score == 3.0
     with pytest.raises(TypeError, match="bool .* str .* float"):
-        ta_ask.DecisionResponse([1], 0.6, "m")
+        typed_ask.DecisionResponse([1], 0.6, "m")
 
 
 def test_bare_callable_is_a_backend_and_sees_the_request():
@@ -58,10 +58,10 @@ def test_bare_callable_is_a_backend_and_sees_the_request():
 
     def backend(request):
         seen.append(request)
-        return ta_ask.DecisionResponse("technical", 0.7, model_id="py-rule", latency_ms=3)
+        return typed_ask.DecisionResponse("technical", 0.7, model_id="py-rule", latency_ms=3)
 
-    schema = ta_ask.DecisionSchema.choice(["billing", "technical"])
-    response = ta_ask.ask(backend, "which dept?", "app crashes on start", schema)
+    schema = typed_ask.DecisionSchema.choice(["billing", "technical"])
+    response = typed_ask.ask(backend, "which dept?", "app crashes on start", schema)
     assert response.result == "technical"
     assert response.model_id == "py-rule"
     assert response.latency_ms == 3
@@ -72,10 +72,10 @@ def test_bare_callable_is_a_backend_and_sees_the_request():
 
 
 def test_callable_backend_wrapper_is_reusable():
-    backend = ta_ask.CallableBackend(lambda req: ta_ask.DecisionResponse(True, 1.0, "lambda"))
-    assert isinstance(backend, ta_ask.DecisionBackend)
+    backend = typed_ask.CallableBackend(lambda req: typed_ask.DecisionResponse(True, 1.0, "lambda"))
+    assert isinstance(backend, typed_ask.DecisionBackend)
     for _ in range(3):
-        assert ta_ask.ask(backend, "q", "c", ta_ask.DecisionSchema.yes_no()).result is True
+        assert typed_ask.ask(backend, "q", "c", typed_ask.DecisionSchema.yes_no()).result is True
 
 
 def test_callable_backend_exception_is_reraised_unchanged():
@@ -83,19 +83,19 @@ def test_callable_backend_exception_is_reraised_unchanged():
         raise ValueError("model exploded")
 
     with pytest.raises(ValueError, match="model exploded"):
-        ta_ask.ask(backend, "q", "c", ta_ask.DecisionSchema.yes_no())
+        typed_ask.ask(backend, "q", "c", typed_ask.DecisionSchema.yes_no())
 
 
 def test_callable_backend_wrong_return_type_is_a_type_error():
-    with pytest.raises(TypeError, match="must return a ta_ask.DecisionResponse, got dict"):
-        ta_ask.ask(lambda req: {"result": True}, "q", "c", ta_ask.DecisionSchema.yes_no())
+    with pytest.raises(TypeError, match="must return a typed_ask.DecisionResponse, got dict"):
+        typed_ask.ask(lambda req: {"result": True}, "q", "c", typed_ask.DecisionSchema.yes_no())
 
 
 def test_non_backend_is_rejected():
-    with pytest.raises(TypeError, match="needs a ta_ask backend or a callable"):
-        ta_ask.ask(42, "q", "c", ta_ask.DecisionSchema.yes_no())
+    with pytest.raises(TypeError, match="needs a typed_ask backend or a callable"):
+        typed_ask.ask(42, "q", "c", typed_ask.DecisionSchema.yes_no())
     with pytest.raises(TypeError):
-        ta_ask.CallableBackend("not callable")
+        typed_ask.CallableBackend("not callable")
 
 
 def test_concurrent_callable_errors_stay_on_their_own_thread():
@@ -105,10 +105,10 @@ def test_concurrent_callable_errors_stay_on_their_own_thread():
         def backend(request):
             if i % 2:
                 raise KeyError(f"thread-{i}")
-            return ta_ask.DecisionResponse(True, 1.0, f"thread-{i}")
+            return typed_ask.DecisionResponse(True, 1.0, f"thread-{i}")
 
         try:
-            errors[i] = ta_ask.ask(backend, "q", "c", ta_ask.DecisionSchema.yes_no()).model_id
+            errors[i] = typed_ask.ask(backend, "q", "c", typed_ask.DecisionSchema.yes_no()).model_id
         except KeyError as exc:
             errors[i] = exc.args[0]
 
@@ -121,11 +121,11 @@ def test_concurrent_callable_errors_stay_on_their_own_thread():
 
 
 def test_module_metadata():
-    assert ta_ask.__version__
-    assert isinstance(ta_ask.HAS_DECIDER, bool)
+    assert typed_ask.__version__
+    assert isinstance(typed_ask.HAS_DECIDER, bool)
 
 
-decider_only = pytest.mark.skipif(not ta_ask.HAS_DECIDER, reason="built without the decider feature")
+decider_only = pytest.mark.skipif(not typed_ask.HAS_DECIDER, reason="built without the decider feature")
 
 
 class _DeciderHandler(BaseHTTPRequestHandler):
@@ -154,8 +154,8 @@ def test_decider_backend_round_trip_against_a_mock_server():
     thread.start()
     try:
         url = f"http://127.0.0.1:{server.server_address[1]}"
-        backend = ta_ask.DeciderBackend.connect(url, "decider-4b-test")
-        response = ta_ask.ask(backend, "Safe?", "small diff", ta_ask.DecisionSchema.yes_no())
+        backend = typed_ask.DeciderBackend.connect(url, "decider-4b-test")
+        response = typed_ask.ask(backend, "Safe?", "small diff", typed_ask.DecisionSchema.yes_no())
     finally:
         server.shutdown()
     assert response.result is True
@@ -166,9 +166,9 @@ def test_decider_backend_round_trip_against_a_mock_server():
 
 @decider_only
 def test_decider_backend_rejects_score_before_any_request():
-    backend = ta_ask.DeciderBackend.connect("http://127.0.0.1:9", "decider-4b")
-    with pytest.raises(ta_ask.UnsupportedSchemaError):
-        ta_ask.ask(backend, "q", "c", ta_ask.DecisionSchema.score(0.0, 1.0))
+    backend = typed_ask.DeciderBackend.connect("http://127.0.0.1:9", "decider-4b")
+    with pytest.raises(typed_ask.UnsupportedSchemaError):
+        typed_ask.ask(backend, "q", "c", typed_ask.DecisionSchema.score(0.0, 1.0))
 
 
 @decider_only
@@ -176,12 +176,12 @@ def test_decider_backend_connection_failure_is_request_failed():
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
-    backend = ta_ask.DeciderBackend.connect(f"http://127.0.0.1:{port}", "decider-4b")
-    with pytest.raises(ta_ask.RequestFailedError):
-        ta_ask.ask(backend, "q", "c", ta_ask.DecisionSchema.yes_no())
+    backend = typed_ask.DeciderBackend.connect(f"http://127.0.0.1:{port}", "decider-4b")
+    with pytest.raises(typed_ask.RequestFailedError):
+        typed_ask.ask(backend, "q", "c", typed_ask.DecisionSchema.yes_no())
 
 
 @decider_only
 def test_decider_spawn_missing_script_is_spawn_failed():
-    with pytest.raises(ta_ask.SpawnFailedError, match="failed to spawn"):
-        ta_ask.DeciderBackend.spawn("/definitely/not/a/real/script.sh", "m", 18240, health_timeout_secs=1)
+    with pytest.raises(typed_ask.SpawnFailedError, match="failed to spawn"):
+        typed_ask.DeciderBackend.spawn("/definitely/not/a/real/script.sh", "m", 18240, health_timeout_secs=1)

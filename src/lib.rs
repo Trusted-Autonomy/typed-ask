@@ -1,6 +1,6 @@
-//! `ta-ask`: a narrow, bounded-question decision primitive.
+//! `typed-ask`: a narrow, bounded-question decision primitive.
 //!
-//! One bounded question plus context in, one calibrated answer out:
+//! One bounded question plus context in, one typed answer with a confidence out:
 //! `ask(backend, question, context, schema) -> DecisionResponse { result, confidence, .. }`.
 //! The crate stays deliberately narrow. Pre-filtering, arbitration across
 //! several answers, and model hosting are the caller's concern; this crate
@@ -70,7 +70,7 @@ pub enum DecisionError {
     UnsupportedSchema(DecisionSchema),
     #[error(
         "failed to spawn backend server (command: '{command}'): {source} -- is the Python \
-         environment set up? see the DeciderBackend section of the ta-ask README"
+         environment set up? see the DeciderBackend section of the typed-ask README"
     )]
     SpawnFailed {
         command: String,
@@ -80,7 +80,7 @@ pub enum DecisionError {
     #[error(
         "backend server at {url} did not become healthy within {timeout_secs}s -- is the \
          Python environment set up and the model downloaded? see the DeciderBackend section \
-         of the ta-ask README"
+         of the typed-ask README"
     )]
     BackendUnavailable { url: String, timeout_secs: u64 },
     #[error(

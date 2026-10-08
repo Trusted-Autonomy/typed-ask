@@ -738,13 +738,13 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the Python env at /tmp/ta-ask-decider-env and the cloned decider repo at /tmp/decider-repo -- see the README's DeciderBackend section"]
+    #[ignore = "requires the Python env at /tmp/typed-ask-decider-env and the cloned decider repo at /tmp/decider-repo -- see the README's DeciderBackend section"]
     fn real_spawn_starts_the_server_and_answers_a_real_question() {
         let backend = DeciderBackend::spawn(
             std::path::Path::new("/tmp/decider-repo/scripts/serve.sh"),
             "Mapika/decider-4b",
             8701,
-            &[("UVICORN", "/tmp/ta-ask-decider-env/bin/uvicorn")],
+            &[("UVICORN", "/tmp/typed-ask-decider-env/bin/uvicorn")],
             std::time::Duration::from_secs(60),
         )
         .expect("spawn should successfully start and health-check the real server");

@@ -1,15 +1,15 @@
-# ta-ask
+# typed-ask
 
 **A narrow, bounded-question decision primitive: `ask(question, context, schema) -> {result, confidence}`, with pluggable backends.**
 
-A surprising number of places in an agent system want the exact same shape: one bounded question plus a bounded piece of context in, one calibrated answer out. "Does this diff look safe to commit?" "Is this message read-only chat, or does it need real dispatch?" "Which department should handle this ticket?" "Do these two tasks overlap?" Each one could grow its own prompt, its own model client, its own confidence parsing and its own test doubles, and then they all drift apart. This crate is the one shared primitive instead: a request/response shape, a pluggable backend trait, deterministic test backends, and one real local-model backend.
+A surprising number of places in an agent system want the exact same shape: one bounded question plus a bounded piece of context in, one typed answer with a confidence out. "Does this diff look safe to commit?" "Is this message read-only chat, or does it need real dispatch?" "Which department should handle this ticket?" "Do these two tasks overlap?" Each one could grow its own prompt, its own model client, its own confidence parsing and its own test doubles, and then they all drift apart. This crate is the one shared primitive instead: a request/response shape, a pluggable backend trait, deterministic test backends, and one real local-model backend.
 
 It stays deliberately narrow. Pre-filtering (regex, BM25), arbitration across several answers, and model hosting are the caller's concern. Arbitration in particular should be built as a *composition* of narrow `ask()` calls combined by deterministic logic, not as one bigger holistic call.
 
 ## What it does
 
 ```rust
-use ta_ask::{ask, DecisionResult, DecisionSchema, FixtureBackend};
+use typed_ask::{ask, DecisionResult, DecisionSchema, FixtureBackend};
 
 // Any `DecisionBackend` works here; FixtureBackend is deterministic, for tests.
 let backend = FixtureBackend::yes_no(true, 0.93);
@@ -24,7 +24,7 @@ let response = ask(
 assert_eq!(response.result, DecisionResult::Bool(true));
 assert!(response.confidence >= 0.9);
 println!("answered by {} in {}ms", response.model_id, response.latency_ms);
-# Ok::<(), ta_ask::DecisionError>(())
+# Ok::<(), typed_ask::DecisionError>(())
 ```
 
 ## Types
@@ -37,12 +37,12 @@ println!("answered by {} in {}ms", response.model_id, response.latency_ms);
 | `DecisionResult` | `Bool(bool)` \| `Choice(String)` \| `Score(f64)`, matching the schema |
 | `DecisionError` | what happened, what was attempted, and what to do about it |
 
-`confidence` is a calibrated `0.0..=1.0`. `model_id` records which backend actually answered, so production usage stays comparable across model choices, not just in offline evaluation.
+`confidence` is a number from 0.0 to 1.0. How well calibrated it is depends on the backend: a purpose-built decision model such as Decider reports calibrated probabilities, while a rule, or a general chat model asked for a number, may not. `model_id` records which backend actually answered, so production usage stays comparable across model choices, not just in offline evaluation.
 
 ## Bring your own backend
 
 ```rust
-use ta_ask::{DecisionBackend, DecisionError, DecisionRequest, DecisionResponse, DecisionResult};
+use typed_ask::{DecisionBackend, DecisionError, DecisionRequest, DecisionResponse, DecisionResult};
 
 struct AlwaysBilling;
 
@@ -74,40 +74,40 @@ The core (types, trait, `ask()`, fixture backends) depends on `thiserror` and no
 
 ```toml
 [dependencies]
-ta-ask = { git = "https://github.com/Trusted-Autonomy/ta-ask", tag = "v0.1.0" }
+typed-ask = { git = "https://github.com/Trusted-Autonomy/typed-ask", tag = "v0.1.0" }
 # or, with the real local-model backend:
-ta-ask = { git = "https://github.com/Trusted-Autonomy/ta-ask", tag = "v0.1.0", features = ["decider"] }
+typed-ask = { git = "https://github.com/Trusted-Autonomy/typed-ask", tag = "v0.1.0", features = ["decider"] }
 ```
 
 ## Python
 
-The same repo ships a Python package, `ta-ask` on the index and `ta_ask` on import, built from the `python/` workspace member with PyO3 and maturin as one abi3 wheel per platform (CPython 3.10+). It is a thin layer over this crate: same types, same backends, same errors. `pyo3` is a dependency of `python/` only, never of the core crate, so `cargo test` here needs no Python interpreter.
+The same repo ships a Python package, `typed-ask` on the index and `typed_ask` on import, built from the `python/` workspace member with PyO3 and maturin as one abi3 wheel per platform (CPython 3.10+). It is a thin layer over this crate: same types, same backends, same errors. `pyo3` is a dependency of `python/` only, never of the core crate, so `cargo test` here needs no Python interpreter.
 
 ```python
-import ta_ask
+import typed_ask
 
-response = ta_ask.ask(
-    ta_ask.FixtureBackend.yes_no(True, 0.93),
+response = typed_ask.ask(
+    typed_ask.FixtureBackend.yes_no(True, 0.93),
     "Does this diff look safe to commit?",
     "3 files changed, 12 lines, tests updated",
-    ta_ask.DecisionSchema.yes_no(),
+    typed_ask.DecisionSchema.yes_no(),
 )
 assert response.result is True  # bool for yes_no, str for choice, float for score
 
 # Any callable fn(request) -> DecisionResponse is a backend:
-def route(request: ta_ask.DecisionRequest) -> ta_ask.DecisionResponse:
+def route(request: typed_ask.DecisionRequest) -> typed_ask.DecisionResponse:
     label = "billing" if "charged" in request.context else "technical"
-    return ta_ask.DecisionResponse(label, 0.8, model_id="rule:keyword-router")
+    return typed_ask.DecisionResponse(label, 0.8, model_id="rule:keyword-router")
 
-schema = ta_ask.DecisionSchema.choice(["billing", "technical", "sales"])
-ta_ask.ask(route, "Which department should handle this?", "charged twice", schema).result
+schema = typed_ask.DecisionSchema.choice(["billing", "technical", "sales"])
+typed_ask.ask(route, "Which department should handle this?", "charged twice", schema).result
 # 'billing'
 
 # The real local-model backend (included in the published wheel):
-backend = ta_ask.DeciderBackend.connect("http://127.0.0.1:8700", "decider-4b")
+backend = typed_ask.DeciderBackend.connect("http://127.0.0.1:8700", "decider-4b")
 ```
 
-`ask()` releases the GIL while a Rust backend works. Errors are raised as `ta_ask.DecisionError` subclasses (`UnsupportedSchemaError`, `RequestFailedError`, `MalformedResponseError`, ...); an exception raised by a Python callable backend propagates unchanged. Build locally with `cd python && maturin develop`; see `python/README.md`.
+`ask()` releases the GIL while a Rust backend works. Errors are raised as `typed_ask.DecisionError` subclasses (`UnsupportedSchemaError`, `RequestFailedError`, `MalformedResponseError`, ...); an exception raised by a Python callable backend propagates unchanged. Build locally with `cd python && maturin develop`; see `python/README.md`.
 
 ## Backends
 
@@ -119,8 +119,8 @@ backend = ta_ask.DeciderBackend.connect("http://127.0.0.1:8700", "decider-4b")
 Install dependencies (note: **two extras are required**: `[metal]` for Apple Silicon acceleration and `[serve]` for the FastAPI/uvicorn HTTP server):
 
 ```bash
-python3 -m venv /tmp/ta-ask-decider-env
-source /tmp/ta-ask-decider-env/bin/activate
+python3 -m venv /tmp/typed-ask-decider-env
+source /tmp/typed-ask-decider-env/bin/activate
 pip install 'decider-ai[metal,serve]'   # [metal] is the Apple Silicon MPS acceleration extra
                                         # [serve] brings in fastapi/uvicorn/httpx
 git clone https://github.com/Mapika/decider /tmp/decider-repo
@@ -130,8 +130,8 @@ Start the server (note: model id must be the **full Hugging Face repo id**, and 
 
 ```bash
 cd /tmp/decider-repo
-UVICORN=/tmp/ta-ask-decider-env/bin/uvicorn \
-PATH="/tmp/ta-ask-decider-env/bin:$PATH" \
+UVICORN=/tmp/typed-ask-decider-env/bin/uvicorn \
+PATH="/tmp/typed-ask-decider-env/bin:$PATH" \
 bash scripts/serve.sh Mapika/decider-4b 8700
 ```
 
@@ -146,7 +146,7 @@ DeciderBackend::spawn(
     Path::new("/tmp/decider-repo/scripts/serve.sh"),
     "Mapika/decider-4b",
     8700,
-    &[("UVICORN", "/tmp/ta-ask-decider-env/bin/uvicorn")],
+    &[("UVICORN", "/tmp/typed-ask-decider-env/bin/uvicorn")],
     Duration::from_secs(60),
 )?;
 ```
@@ -171,6 +171,11 @@ The tests that need a live Decider server are `#[ignore]`d; run them with `cargo
 ## Provenance
 
 Extracted from [TrustedAutonomy](https://github.com/Trusted-Autonomy/TrustedAutonomy)'s `crates/ta-ask` at commit `71772bccab`. See `CHANGELOG.md` for what changed in the extraction.
+
+## Planned
+
+- **Bounded context.** Today the library enforces the shape of the answer (the schema). The question and context are meant to be short, but their size is not limited. A configurable size limit on both is planned.
+- **More backends.** A hosted-model backend (OpenAI- and Anthropic-style APIs) so one bounded-decision interface covers local and hosted models.
 
 ## License
 
