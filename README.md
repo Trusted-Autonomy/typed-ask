@@ -79,6 +79,36 @@ ta-ask = { git = "https://github.com/Trusted-Autonomy/ta-ask", tag = "v0.1.0" }
 ta-ask = { git = "https://github.com/Trusted-Autonomy/ta-ask", tag = "v0.1.0", features = ["decider"] }
 ```
 
+## Python
+
+The same repo ships a Python package, `ta-ask` on the index and `ta_ask` on import, built from the `python/` workspace member with PyO3 and maturin as one abi3 wheel per platform (CPython 3.10+). It is a thin layer over this crate: same types, same backends, same errors. `pyo3` is a dependency of `python/` only, never of the core crate, so `cargo test` here needs no Python interpreter.
+
+```python
+import ta_ask
+
+response = ta_ask.ask(
+    ta_ask.FixtureBackend.yes_no(True, 0.93),
+    "Does this diff look safe to commit?",
+    "3 files changed, 12 lines, tests updated",
+    ta_ask.DecisionSchema.yes_no(),
+)
+assert response.result is True  # bool for yes_no, str for choice, float for score
+
+# Any callable fn(request) -> DecisionResponse is a backend:
+def route(request: ta_ask.DecisionRequest) -> ta_ask.DecisionResponse:
+    label = "billing" if "charged" in request.context else "technical"
+    return ta_ask.DecisionResponse(label, 0.8, model_id="rule:keyword-router")
+
+schema = ta_ask.DecisionSchema.choice(["billing", "technical", "sales"])
+ta_ask.ask(route, "Which department should handle this?", "charged twice", schema).result
+# 'billing'
+
+# The real local-model backend (included in the published wheel):
+backend = ta_ask.DeciderBackend.connect("http://127.0.0.1:8700", "decider-4b")
+```
+
+`ask()` releases the GIL while a Rust backend works. Errors are raised as `ta_ask.DecisionError` subclasses (`UnsupportedSchemaError`, `RequestFailedError`, `MalformedResponseError`, ...); an exception raised by a Python callable backend propagates unchanged. Build locally with `cd python && maturin develop`; see `python/README.md`.
+
 ## Backends
 
 - `FixtureBackend` / `ErrorFixtureBackend`: deterministic, for tests. No network, no subprocess.

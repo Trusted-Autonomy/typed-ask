@@ -11,6 +11,11 @@ First standalone release, extracted from TrustedAutonomy's in-tree
 
 ### Added
 
+- `python/` workspace member (`ta-ask-py`): a PyO3 + maturin extension
+  module named `ta_ask`, built as an abi3 wheel (one wheel per platform for
+  CPython 3.10+). Exposes the request/response types, `ask()`, the fixture
+  backends, `DeciderBackend` (when built with the `decider` feature, which
+  the published wheel enables), and any Python callable as a backend.
 - `DecisionError::BackendFailed(String)` for a custom backend's own failure
   that fits no other variant (used by the Python callable backend).
 - `tests/feature_gating.rs`, which fails if the core crate gains a required
