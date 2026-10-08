@@ -1,0 +1,31 @@
+[build-system]
+# 1.9+ sets PYO3_BUILD_EXTENSION_MODULE itself, so pyo3's deprecated
+# `extension-module` cargo feature is not needed.
+requires = ["maturin>=1.9,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "ta-ask"
+description = "A narrow, bounded-question decision primitive: ask(question, context, schema) -> {result, confidence}, with pluggable backends. Python bindings for the ta-ask Rust crate."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+dynamic = ["version"]
+keywords = ["decision", "classifier", "agent", "autonomy", "llm"]
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Repository = "https://github.com/Trusted-Autonomy/ta-ask"
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[tool.maturin]
+module-name = "ta_ask"
+# The published wheel includes the real local-model backend.
+features = ["decider"]

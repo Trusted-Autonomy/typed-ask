@@ -25,3 +25,10 @@ decider = ["dep:reqwest", "dep:serde", "dep:serde_json"]
 
 [dev-dependencies]
 tempfile = "3"
+
+[workspace]
+members = [".", "python"]
+# Plain `cargo build`/`cargo test` at the root touch the core crate only,
+# so they never need a Python interpreter. The Python extension is built
+# with maturin (see python/README.md).
+default-members = ["."]
